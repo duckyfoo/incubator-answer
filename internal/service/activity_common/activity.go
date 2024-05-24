@@ -20,9 +20,14 @@
 package activity_common
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"net/http"
+	"os"
 	"time"
 
+	"github.com/apache/incubator-answer/internal/base/constant"
 	"github.com/apache/incubator-answer/internal/entity"
 	"github.com/apache/incubator-answer/internal/schema"
 	"github.com/apache/incubator-answer/internal/service/activity_queue"
@@ -83,8 +88,64 @@ func (ac *ActivityCommon) HandleActivity(ctx context.Context, msg *schema.Activi
 	if len(msg.RevisionID) > 0 {
 		act.RevisionID = converter.StringToInt64(msg.RevisionID)
 	}
+
+	// Log the ObjectID and ActivityType for debugging purposes only if the activity type is 'question.asked'
+	if msg.ActivityTypeKey == constant.ActQuestionAsked {
+		log.Debugf("Processing 'question.asked' activity: ObjectID=%s, ActivityType=%d", act.ObjectID, act.ActivityType)
+		ac.sendWebhook(act)
+	}
+
 	if err := ac.activityRepo.AddActivity(ctx, act); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (ac *ActivityCommon) sendWebhook(act *entity.Activity) {
+	go func() {
+		webhookURL := os.Getenv("WEBHOOK_URL")
+		authHeader := os.Getenv("WEBHOOK_AUTHORIZATION")
+
+		// Log the webhook URL and auth header for debugging purposes
+		log.Debugf("Webhook URL: %s", webhookURL)
+		log.Debugf("Webhook auth header: %s", authHeader)
+
+		// log the Activity
+		log.Debugf("Activity: %v", act)
+
+		jsonData, err := json.Marshal(act)
+		if err != nil {
+			log.Errorf("Failed to marshal activity data: %v", err)
+			return
+		}
+
+		// log the json data
+		log.Debugf("JSON data: %s", jsonData)
+
+		req, err := http.NewRequest("POST", webhookURL, bytes.NewBuffer(jsonData))
+		if err != nil {
+			log.Errorf("Failed to create request: %v", err)
+			return
+		}
+
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", authHeader)
+
+		client := &http.Client{
+			Timeout: 10 * time.Second, // Set timeout to 10 seconds
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Errorf("Failed to send webhook: %v", err)
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode >= 300 {
+			log.Errorf("Webhook call returned status code: %d", resp.StatusCode)
+		} else {
+			log.Infof("Webhook sent successfully: %s", act.ObjectID)
+		}
+
+	}()
 }

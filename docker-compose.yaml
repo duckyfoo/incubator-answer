@@ -18,12 +18,15 @@
 version: "3"
 services:
   answer:
-    image: apache/answer
+    image: local/answer:latest
     ports:
       - '9080:80'
     restart: on-failure
     volumes:
       - answer-data:/data
+    environment:
+      - WEBHOOK_URL=https://382718b7-1341-49d3-898b-6476adf9945d.mock.pstmn.io/add
+      - WEBHOOK_AUTHORIZATION=Basic 1234567890
 
 volumes:
   answer-data:
