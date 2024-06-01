@@ -54,6 +54,7 @@ type AnswerAPIRouter struct {
 	permissionController    *controller.PermissionController
 	userPluginController    *controller.UserPluginController
 	reviewController        *controller.ReviewController
+	chatController          *controller.ChatController
 }
 
 func NewAnswerAPIRouter(
@@ -159,6 +160,9 @@ func (a *AnswerAPIRouter) RegisterUnAuthAnswerAPIRouter(r *gin.RouterGroup) {
 	r.GET("/question/similar/tag", a.questionController.SimilarQuestion)
 	r.GET("/personal/qa/top", a.questionController.UserTop)
 	r.GET("/personal/question/page", a.questionController.PersonalQuestionPage)
+
+	// chat
+	r.GET("/chat/completion", a.chatController.ChatCompletion)
 
 	// comment
 	r.GET("/comment/page", a.commentController.GetCommentWithPage)
