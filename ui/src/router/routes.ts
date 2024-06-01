@@ -114,6 +114,11 @@ const routes: RouteNode[] = [
               return guard.googleSnapshotRedirect();
             },
           },
+          // Chats
+          {
+            path: '/chats',
+            page: 'pages/Chats',
+          },
           // tags
           {
             path: 'tags',

@@ -861,6 +861,7 @@ ui:
     nav:
       question: Questions
       tag: Tags
+      chat: Chats
       user: Users
       profile: Profile
       setting: Settings
