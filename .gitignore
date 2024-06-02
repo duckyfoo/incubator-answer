@@ -32,3 +32,5 @@ dist/
 
 /data/*
 
+configs/config.yaml
+
