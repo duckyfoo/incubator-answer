@@ -3965,6 +3965,12 @@ paths:
       consumes:
       - application/json
       description: Get Chat Completion
+      parameters:
+      - description: Prompt for the chat completion
+        in: query
+        name: prompt
+        required: true
+        type: string
       produces:
       - application/json
       responses:

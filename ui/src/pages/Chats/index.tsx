@@ -2,11 +2,14 @@ import React, { useEffect, useState } from 'react';
 
 const Chats: React.FC = () => {
   const [message, setMessage] = useState<string>('');
+  const prompt = 'life, the univers, and everything'; // Replace with your actual prompt
 
   useEffect(() => {
     const fetchChatCompletion = async () => {
       try {
-        const response = await fetch(`/answer/api/v1/chat/completion`);
+        const response = await fetch(
+          `/answer/api/v1/chat/completion?prompt=${encodeURIComponent(prompt)}`,
+        );
         if (!response.ok) {
           throw new Error('Network response was not ok');
         }
@@ -18,7 +21,7 @@ const Chats: React.FC = () => {
     };
 
     fetchChatCompletion();
-  }, []); // Empty dependency array means this runs once after the initial render
+  }, [prompt]); // Add prompt to the dependency array
 
   console.log(message); // Logs the message state
 

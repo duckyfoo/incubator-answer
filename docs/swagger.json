@@ -2183,6 +2183,15 @@
                     "api-answer"
                 ],
                 "summary": "Get Chat Completion",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Prompt for the chat completion",
+                        "name": "prompt",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",

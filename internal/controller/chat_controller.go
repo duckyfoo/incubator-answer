@@ -6,6 +6,7 @@ import (
 	"github.com/apache/incubator-answer/internal/base/handler"
 	"github.com/gin-gonic/gin"
 	"github.com/sashabaranov/go-openai"
+	"github.com/segmentfault/pacman/errors"
 )
 
 // ChatController chat controller
@@ -22,10 +23,16 @@ func NewChatController() *ChatController {
 // @Tags api-answer
 // @Accept  json
 // @Produce  json
+// @Param prompt query string true "Prompt for the chat completion"
 // @Router /answer/api/v1/chat/completion [get]
 // @Success 200 {object} map[string]interface{}
 func (cc *ChatController) ChatCompletion(ctx *gin.Context) {
-	const MARKDOWN_PROMPT = "hello there"
+	prompt := ctx.Query("prompt")
+	if prompt == "" {
+		handler.HandleResponse(ctx, gin.Error{Err: errors.New(400, "prompt is required")}, nil)
+		return
+	}
+
 	OPENAI_API_KEY := os.Getenv("OPENAI_API_KEY")
 
 	client := openai.NewClient(OPENAI_API_KEY)
@@ -33,7 +40,7 @@ func (cc *ChatController) ChatCompletion(ctx *gin.Context) {
 		Model: "gpt-4",
 		Messages: []openai.ChatCompletionMessage{
 			{Role: "system", Content: "You are a helpful assistant."},
-			{Role: "user", Content: MARKDOWN_PROMPT},
+			{Role: "user", Content: prompt},
 		},
 	})
 	if err != nil {
