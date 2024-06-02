@@ -36,7 +36,7 @@ func (cc *ChatController) ChatCompletion(ctx *gin.Context) {
 	OPENAI_API_KEY := os.Getenv("OPENAI_API_KEY")
 
 	client := openai.NewClient(OPENAI_API_KEY)
-	response, err := client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
+	stream, err := client.CreateChatCompletionStream(ctx, openai.ChatCompletionRequest{
 		Model: "gpt-4",
 		Messages: []openai.ChatCompletionMessage{
 			{Role: "system", Content: "You are a helpful assistant."},
@@ -47,6 +47,27 @@ func (cc *ChatController) ChatCompletion(ctx *gin.Context) {
 		handler.HandleResponse(ctx, err, nil)
 		return
 	}
+	defer stream.Close()
 
-	handler.HandleResponse(ctx, nil, response.Choices[0].Message.Content)
+	ctx.Writer.Header().Set("Content-Type", "text/event-stream")
+	ctx.Writer.Header().Set("Cache-Control", "no-cache")
+	ctx.Writer.Header().Set("Connection", "keep-alive")
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			response, err := stream.Recv()
+			if err != nil {
+				handler.HandleResponse(ctx, err, nil)
+				return
+			}
+			if response.Choices[0].Delta.Content != "" {
+				ctx.Writer.Write([]byte("event: token\n"))
+				ctx.Writer.Write([]byte("data: " + response.Choices[0].Delta.Content + "\n\n"))
+				ctx.Writer.Flush()
+			}
+		}
+	}
 }
