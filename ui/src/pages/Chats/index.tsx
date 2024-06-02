@@ -4,35 +4,23 @@ const Chats: React.FC = () => {
   const [message, setMessage] = useState<string>('');
 
   useEffect(() => {
-    const eventSource = new EventSource(`/answer/api/v1/chat/completion`);
-
-    eventSource.onopen = () => {
-      console.log('Connection to server opened.');
-    };
-
-    eventSource.onmessage = (event) => {
-      console.log('New message received:', event.data);
-      const newChunk = event.data.replace(/\$NEWLINE\$/g, '\n');
-      setMessage((prevMessage) => prevMessage + newChunk);
-    };
-
-    eventSource.onerror = (err) => {
-      console.error('EventSource failed:', err);
-      if (err instanceof Event) {
-        console.error('Error details:', {
-          type: err.type,
-          url: eventSource.url,
-          readyState: eventSource.readyState,
-        });
+    const fetchChatCompletion = async () => {
+      try {
+        const response = await fetch(`/answer/api/v1/chat/completion`);
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const result = await response.json();
+        setMessage(result.data); // Set message to the data element of the response
+      } catch (error) {
+        console.error('Fetch error:', error);
       }
-      eventSource.close();
     };
 
-    return () => {
-      eventSource.close();
-      console.log('EventSource connection closed.');
-    };
-  }, []);
+    fetchChatCompletion();
+  }, []); // Empty dependency array means this runs once after the initial render
+
+  console.log(message); // Logs the message state
 
   return (
     <div>
