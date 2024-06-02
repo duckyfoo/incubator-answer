@@ -31,6 +31,7 @@ import (
 	"github.com/apache/incubator-answer/internal/cli"
 	"github.com/apache/incubator-answer/internal/schema"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"github.com/segmentfault/pacman"
 	"github.com/segmentfault/pacman/contrib/log/zap"
 	"github.com/segmentfault/pacman/contrib/server/http"
@@ -61,6 +62,12 @@ var (
 // @in header
 // @name Authorization
 func Main() {
+	// Load environment variables from .env file
+	err := godotenv.Load()
+	if err != nil {
+		log.Error("Error loading .env file")
+	}
+
 	log.SetLogger(zap.NewLogger(
 		log.ParseLevel(logLevel), zap.WithName("answer"), zap.WithPath(logPath)))
 	Execute()

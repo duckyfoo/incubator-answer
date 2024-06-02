@@ -39,6 +39,7 @@ require (
 	github.com/grokify/html-strip-tags-go v0.0.1
 	github.com/jinzhu/copier v0.3.5
 	github.com/jinzhu/now v1.1.5
+	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.7
 	github.com/microcosm-cc/bluemonday v1.0.21
 	github.com/ory/dockertest/v3 v3.10.0

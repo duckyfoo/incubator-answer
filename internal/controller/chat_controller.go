@@ -2,9 +2,10 @@ package controller
 
 import (
 	"io"
-	"net/http"
+	"os"
 	"strings"
 
+	"github.com/apache/incubator-answer/internal/base/handler"
 	"github.com/gin-gonic/gin"
 	"github.com/sashabaranov/go-openai"
 )
@@ -28,11 +29,14 @@ func NewChatController() *ChatController {
 func (cc *ChatController) ChatCompletion(ctx *gin.Context) {
 	const MARKDOWN_PROMPT = "hello there"
 	const NEWLINE = "$NEWLINE$"
-	const OPENAI_API_KEY = "<API_KEY>"
+	OPENAI_API_KEY := os.Getenv("OPENAI_API_KEY")
+
+	// Use middleware to get the user ID
+	// userID := middleware.GetLoginUserIDFromContext(ctx)
 
 	client := openai.NewClient(OPENAI_API_KEY)
 	stream, err := client.CreateChatCompletionStream(ctx, openai.ChatCompletionRequest{
-		Model: "gpt-3.5-turbo",
+		Model: "gpt-4",
 		Messages: []openai.ChatCompletionMessage{
 			{Role: "system", Content: "You are a helpful assistant."},
 			{Role: "user", Content: MARKDOWN_PROMPT},
@@ -40,7 +44,7 @@ func (cc *ChatController) ChatCompletion(ctx *gin.Context) {
 		Stream: true,
 	})
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		handler.HandleResponse(ctx, err, nil)
 		return
 	}
 	defer stream.Close()
@@ -52,7 +56,7 @@ func (cc *ChatController) ChatCompletion(ctx *gin.Context) {
 				return false
 			}
 			if err != nil {
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				handler.HandleResponse(ctx, err, nil)
 				return false
 			}
 			content := strings.ReplaceAll(response.Choices[0].Delta.Content, "\n", NEWLINE)

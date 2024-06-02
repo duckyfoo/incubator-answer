@@ -34,3 +34,4 @@ dist/
 
 configs/config.yaml
 
+.env

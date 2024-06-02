@@ -85,6 +85,7 @@ func NewAnswerAPIRouter(
 	permissionController *controller.PermissionController,
 	userPluginController *controller.UserPluginController,
 	reviewController *controller.ReviewController,
+	chatController *controller.ChatController,
 ) *AnswerAPIRouter {
 	return &AnswerAPIRouter{
 		langController:          langController,
@@ -114,6 +115,7 @@ func NewAnswerAPIRouter(
 		permissionController:    permissionController,
 		userPluginController:    userPluginController,
 		reviewController:        reviewController,
+		chatController:          chatController,
 	}
 }
 
