@@ -2,6 +2,7 @@ package controller
 
 import (
 	"os"
+	"strings"
 
 	"github.com/apache/incubator-answer/internal/base/handler"
 	"github.com/gin-gonic/gin"
@@ -53,6 +54,8 @@ func (cc *ChatController) ChatCompletion(ctx *gin.Context) {
 	ctx.Writer.Header().Set("Cache-Control", "no-cache")
 	ctx.Writer.Header().Set("Connection", "keep-alive")
 
+	const NEWLINE = "$NEWLINE$"
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -64,8 +67,9 @@ func (cc *ChatController) ChatCompletion(ctx *gin.Context) {
 				return
 			}
 			if response.Choices[0].Delta.Content != "" {
+				contentWithNewlines := strings.ReplaceAll(response.Choices[0].Delta.Content, "\n", NEWLINE)
 				ctx.Writer.Write([]byte("event: token\n"))
-				ctx.Writer.Write([]byte("data: " + response.Choices[0].Delta.Content + "\n\n"))
+				ctx.Writer.Write([]byte("data: " + contentWithNewlines + "\n\n"))
 				ctx.Writer.Flush()
 			}
 		}

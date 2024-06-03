@@ -16,14 +16,25 @@ import { markdownLookBack } from "@llm-ui/markdown";
 import { useLLMOutput, type LLMOutputComponent } from "@llm-ui/react";
 import parseHtml from "html-react-parser";
 
-const Chats: React.FC = () => {
+const Chats = () => {
   const [output, setOutput] = useState<string>("");
   const [isStarted, setIsStarted] = useState(false);
   const [isStreamFinished, setIsStreamFinished] = useState<boolean>(false);
   const [ReactMarkdown, setReactMarkdown] = useState<any>(null);
   const [remarkGfm, setRemarkGfm] = useState<any>(null);
   const [highlighter, setHighlighter] = useState<any>(null);
-  const prompt = 'the answer to life the universe and everything'; // Replace with your actual prompt
+  const prompt = 'two paragraphs of a simple story about bunnies'; // Replace with your actual prompt
+  const NEWLINE = '$NEWLINE$'
+  
+  
+  const MarkdownComponent: LLMOutputComponent = ({ blockMatch }) => {
+    const markdown = blockMatch.output;
+    return (
+      <ReactMarkdown className={"markdown"} remarkPlugins={[remarkGfm]}>
+      {markdown}
+      </ReactMarkdown>
+    );
+  };
   
   const codeToHtmlOptions: CodeToHtmlOptions = {
     theme: "github-dark",
@@ -45,20 +56,13 @@ const Chats: React.FC = () => {
     }
     return <>{parseHtml(html)}</>;
   };
-
-  const MarkdownComponent: LLMOutputComponent = ({ blockMatch }) => {
-    const markdown = blockMatch.output;
-    return (
-      <ReactMarkdown className={"markdown"} remarkPlugins={[remarkGfm]}>
-        {markdown}
-      </ReactMarkdown>
-    );
-  };
-
+  
+  
+  
   const startChat = useCallback(() => {
     setIsStarted(true);
     setOutput("");
-
+    
     const eventSource = new EventSource(
       `/answer/api/v1/chat/completion?prompt=${encodeURIComponent(prompt)}`,
     );
@@ -67,11 +71,10 @@ const Chats: React.FC = () => {
     
     eventSource.addEventListener("token", (e) => {
       // avoid newlines getting messed up
-      //const token = e.data.replaceAll(NEWLINE, "\n");
-      const token = e.data;
+      const token = e.data.replaceAll(NEWLINE, "\n");
       setOutput((prevResponse) => `${prevResponse}${token}`);
     });
-
+    
     eventSource.addEventListener("finished", (e) => {
       console.log("finished", e);
       eventSource.close();
@@ -82,16 +85,16 @@ const Chats: React.FC = () => {
       eventSource.close();
     };
   }, [prompt]);
-
+  
   useEffect(() => {
     import('react-markdown').then((module) => {
       setReactMarkdown(() => module.default);
     });
-
+    
     import('remark-gfm').then((module) => {
       setRemarkGfm(() => module.default);
     });
-
+    
     Promise.all([
       import('shiki/core'),
       import('shiki/langs'),
@@ -102,7 +105,7 @@ const Chats: React.FC = () => {
       const bundledLanguagesInfo = langsModule.bundledLanguagesInfo;
       const bundledThemes = themesModule.bundledThemes;
       const getWasm = wasmModule.default;
-
+      
       const highlighterInstance = loadHighlighter(
         getHighlighterCore({
           langs: allLangs(bundledLanguagesInfo),
@@ -111,12 +114,12 @@ const Chats: React.FC = () => {
           loadWasm: getWasm,
         })
       );
-
+      
       setHighlighter(highlighterInstance);
     });
-
+    
   }, []);
-
+  
   const { blockMatches } = useLLMOutput({
     llmOutput: output,
     fallbackBlock: {
@@ -133,19 +136,19 @@ const Chats: React.FC = () => {
     ],
     isStreamFinished,
   });
-
+  
   if (!ReactMarkdown || !remarkGfm || !highlighter) {
     return <div>Loading...</div>;
   }
-
+  
   return (
     <div>
-      <p>Prompt: {prompt}</p>
-      {!isStarted && <button onClick={startChat}>Start</button>}
-      {blockMatches.map((blockMatch, index) => {
-        const Component = blockMatch.block.component;
-        return <Component key={index} blockMatch={blockMatch} />;
-      })}
+    <p>Prompt: {prompt}</p>
+    {!isStarted && <button onClick={startChat}>Start</button>}
+    {blockMatches.map((blockMatch, index) => {
+      const Component = blockMatch.block.component;
+      return <Component key={index} blockMatch={blockMatch} />;
+    })}
     </div>
   );
 };
