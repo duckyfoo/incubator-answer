@@ -20,11 +20,10 @@ const Chats: React.FC = () => {
   const [output, setOutput] = useState<string>("");
   const [isStarted, setIsStarted] = useState(false);
   const [isStreamFinished, setIsStreamFinished] = useState<boolean>(false);
-  const [message, setMessage] = useState<string>('');
   const [ReactMarkdown, setReactMarkdown] = useState<any>(null);
   const [remarkGfm, setRemarkGfm] = useState<any>(null);
   const [highlighter, setHighlighter] = useState<any>(null);
-  const prompt = 'mic check'; // Replace with your actual prompt
+  const prompt = 'the answer to life the universe and everything'; // Replace with your actual prompt
   
   const codeToHtmlOptions: CodeToHtmlOptions = {
     theme: "github-dark",
@@ -46,17 +45,53 @@ const Chats: React.FC = () => {
     }
     return <>{parseHtml(html)}</>;
   };
-  
-  
+
+  const MarkdownComponent: LLMOutputComponent = ({ blockMatch }) => {
+    const markdown = blockMatch.output;
+    return (
+      <ReactMarkdown className={"markdown"} remarkPlugins={[remarkGfm]}>
+        {markdown}
+      </ReactMarkdown>
+    );
+  };
+
+  const startChat = useCallback(() => {
+    setIsStarted(true);
+    setOutput("");
+
+    const eventSource = new EventSource(
+      `/answer/api/v1/chat/completion?prompt=${encodeURIComponent(prompt)}`,
+    );
+    
+    eventSource.addEventListener('error', () => eventSource.close());
+    
+    eventSource.addEventListener("token", (e) => {
+      // avoid newlines getting messed up
+      //const token = e.data.replaceAll(NEWLINE, "\n");
+      const token = e.data;
+      setOutput((prevResponse) => `${prevResponse}${token}`);
+    });
+
+    eventSource.addEventListener("finished", (e) => {
+      console.log("finished", e);
+      eventSource.close();
+      setIsStreamFinished(true);
+    });
+    
+    return () => {
+      eventSource.close();
+    };
+  }, [prompt]);
+
   useEffect(() => {
     import('react-markdown').then((module) => {
       setReactMarkdown(() => module.default);
     });
-    
+
     import('remark-gfm').then((module) => {
       setRemarkGfm(() => module.default);
     });
-    
+
     Promise.all([
       import('shiki/core'),
       import('shiki/langs'),
@@ -67,7 +102,7 @@ const Chats: React.FC = () => {
       const bundledLanguagesInfo = langsModule.bundledLanguagesInfo;
       const bundledThemes = themesModule.bundledThemes;
       const getWasm = wasmModule.default;
-      
+
       const highlighterInstance = loadHighlighter(
         getHighlighterCore({
           langs: allLangs(bundledLanguagesInfo),
@@ -76,53 +111,41 @@ const Chats: React.FC = () => {
           loadWasm: getWasm,
         })
       );
-      
+
       setHighlighter(highlighterInstance);
     });
-  }, []);
-  
-  const startChat = useCallback(() => {
-    const eventSource = new EventSource(
-      `/answer/api/v1/chat/completion?prompt=${encodeURIComponent(prompt)}`,
-    );
-    
-    eventSource.addEventListener('error', () => eventSource.close());
-    
-    eventSource.addEventListener('token', (event: MessageEvent) => {
-      setMessage((prevMessage) => prevMessage + event.data);
-    });
-    
-    return () => {
-      eventSource.close();
-    };
-  }, [prompt]);
 
-  
-  
-  useEffect(() => {
-    const cleanupEventSource = startChat();
-    return cleanupEventSource;
-  }, [startChat]);
-  
+  }, []);
+
+  const { blockMatches } = useLLMOutput({
+    llmOutput: output,
+    fallbackBlock: {
+      component: MarkdownComponent,
+      lookBack: markdownLookBack(),
+    },
+    blocks: [
+      {
+        component: CodeBlock,
+        findCompleteMatch: findCompleteCodeBlock(),
+        findPartialMatch: findPartialCodeBlock(),
+        lookBack: codeBlockLookBack(),
+      },
+    ],
+    isStreamFinished,
+  });
+
   if (!ReactMarkdown || !remarkGfm || !highlighter) {
     return <div>Loading...</div>;
   }
-  
-  const MarkdownComponent: LLMOutputComponent = ({ blockMatch }) => {
-    const markdown = blockMatch.output;
-    return (
-      <ReactMarkdown className={"markdown"} remarkPlugins={[remarkGfm]}>
-      {markdown}
-      </ReactMarkdown>
-    );
-  };
-  
-  
-  
-  
+
   return (
     <div>
-    <ReactMarkdown remarkPlugins={[remarkGfm]}>{message}</ReactMarkdown>
+      <p>Prompt: {prompt}</p>
+      {!isStarted && <button onClick={startChat}>Start</button>}
+      {blockMatches.map((blockMatch, index) => {
+        const Component = blockMatch.block.component;
+        return <Component key={index} blockMatch={blockMatch} />;
+      })}
     </div>
   );
 };
